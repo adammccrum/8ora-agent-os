@@ -1,7 +1,13 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "8ora-agent-os",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-09-30",
-  "observability": { "enabled": true }
+ "$schema":"node_modules/wrangler/config-schema.json",
+ "name":"8ora-agent-os",
+ "main":"src/index.ts",
+ "compatibility_date":"2026-09-30",
+ "observability":{"enabled":true},
+ "d1_databases":[{
+   "binding":"DB",
+   "database_name":"8ora-agent-os",
+   "database_id":"REPLACE_WITH_D1_DATABASE_ID",
+   "migrations_dir":"migrations"
+ }]
 }
