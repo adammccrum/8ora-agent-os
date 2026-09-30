@@ -1,0 +1,3 @@
+# Local development only. Copy to .dev.vars and add real values there.
+OMNIROUTE_BASE_URL=https://example.invalid
+OMNIROUTE_API_KEY=replace-locally
