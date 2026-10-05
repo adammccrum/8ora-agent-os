@@ -1,6 +1,19 @@
-import {describe,expect,it} from "vitest";
-import {selectAgent} from "../src/registry";
-describe("capability routing",()=>{
- it("routes coding work to software engineering",()=>expect(selectAgent("please code and debug this").id).toBe("software-engineer"));
- it("uses safe general fallback for unknown work",()=>expect(selectAgent("something entirely unmatched").id).toBe("ora-general"));
+import { describe, expect, it } from "vitest";
+import { getUniversalAgent, listAgents, selectTaskMode } from "../src/registry";
+
+describe("universal IrisKey agent", () => {
+  it("exposes exactly one universal agent", () => {
+    expect(listAgents()).toHaveLength(1);
+    expect(getUniversalAgent().id).toBe("iriskey-universal");
+  });
+
+  it("uses coding mode for software work", () => {
+    const mode = selectTaskMode("please code and debug this GitHub repo");
+    expect(mode.id).toBe("coding");
+    expect(mode.modelProfile).toBe("coding");
+  });
+
+  it("uses safe general reasoning fallback for unmatched work", () => {
+    expect(selectTaskMode("something entirely unmatched").id).toBe("general");
+  });
 });
