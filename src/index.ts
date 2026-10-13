@@ -3,7 +3,7 @@ import {buildMarketingDrafts} from "./marketing-drafts";
 import {orchestrate} from "./orchestrator";
 import {listAgents,listTools} from "./registry";
 import {Store} from "./storage";
-import type {ActionProposal,Env} from "./types";
+import type {Env} from "./types";
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data,null,2),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
 const OWNER="founder", TENANT="iriskey-internal";
 async function tokenMatches(actual:string,expected:string):Promise<boolean>{
@@ -33,18 +33,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   try{const result=await orchestrate(env,body.request);await store.updateJob(job.id,"planned",result.agent.id);await store.audit("orchestration.planned",{agent:result.agent},{jobId:job.id,tenantId:TENANT,actorId:OWNER});return json({jobId:job.id,...result},202)}
   catch(error){await store.updateJob(job.id,"failed");await store.audit("orchestration.failed",{error:"model route failed"},{jobId:job.id,tenantId:TENANT,actorId:OWNER});return json({jobId:job.id,error:"orchestration failed"},502)}
  }
- if(request.method==="POST"&&url.pathname==="/v1/approvals"){
-  const body=await request.json<{proposal?:ActionProposal;jobId?:string}>();
-  if(!body.proposal||typeof body.proposal.toolId!=="string")return json({error:"invalid proposal"},400);
-  const tool=listTools().find(t=>t.id===body.proposal!.toolId);
-  if(!tool||tool.permission!=="READ")return json({error:"External tool approvals disabled until execution gateway is implemented"},403);
-  return json({error:"Approval issuance disabled until execution gateway is implemented"},403);
- }
- const match=url.pathname.match(/^\/v1\/approvals\/([^/]+)\/(approve|deny)$/);
- if(request.method==="POST"&&match){
-  const ok=await store.decideApproval(match[1],match[2]==="approve"?"approved":"denied",OWNER,TENANT);
-  return json({ok},ok?200:403);
- }
+ if(request.method==="POST"&&url.pathname.startsWith("/v1/approvals"))return json({error:"Approvals disabled in draft-only staging"},403);
  if(request.method==="POST"&&url.pathname==="/v1/authority/check"){
   const body=await request.json<{proposal?:ActionProposal;approvalId?:string}>();
   if(!body.proposal)return json({error:"proposal required"},400);
