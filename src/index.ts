@@ -1,6 +1,4 @@
-import {authorize} from "./authority";
 import {dashboardHtml} from "./dashboard";
-import {hashArgs} from "./hash";
 import {buildMarketingDrafts} from "./marketing-drafts";
 import {orchestrate} from "./orchestrator";
 import {listAgents,listTools} from "./registry";
@@ -40,8 +38,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   if(!body.proposal||typeof body.proposal.toolId!=="string")return json({error:"invalid proposal"},400);
   const tool=listTools().find(t=>t.id===body.proposal!.toolId);
   if(!tool||tool.permission!=="READ")return json({error:"External tool approvals disabled until execution gateway is implemented"},403);
-  const approval=await store.createApproval({tenantId:TENANT,actorId:OWNER,toolId:tool.id,jobId:body.jobId,argsHash:await hashArgs(body.proposal.args)});
-  return json(approval,202);
+  return json({error:"Approval issuance disabled until execution gateway is implemented"},403);
  }
  const match=url.pathname.match(/^\/v1\/approvals\/([^/]+)\/(approve|deny)$/);
  if(request.method==="POST"&&match){
@@ -56,16 +53,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   if(!tool||tool.permission==="BLOCKED")return json({allowed:false,reason:"Tool unavailable"},403);
   if(tool.permission==="READ")return json({allowed:true,reason:"Read-only capability"},200);
   return json({allowed:false,reason:"External execution disabled until a controlled gateway is implemented"},403);
-  if(!body.approvalId)return json({allowed:false,reason:"Approval required"},403);
-  const argsHash=await hashArgs(proposal.args);
-  const now=Date.now();
-  // One-use atomic consume: the database, not the caller, decides whether authority exists.
-  const consumed=await env.DB.prepare(
-   "UPDATE approvals SET status='consumed' WHERE id=? AND tenant_id=? AND actor_id=? AND tool_id=? AND args_hash=? AND status='approved' AND expires_at>?"
-  ).bind(body.approvalId,TENANT,OWNER,proposal.toolId,argsHash,now).run();
-  if(consumed.meta.changes!==1)return json({allowed:false,reason:"Approval missing, expired, mismatched or already used"},403);
-  await store.audit("approval.consumed",{approvalId:body.approvalId,toolId:proposal.toolId},{tenantId:TENANT,actorId:OWNER});
-  return json({allowed:true,reason:"One-use authority consumed"},200);
+
  }
  return json({error:"not found"},404);
 },async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
