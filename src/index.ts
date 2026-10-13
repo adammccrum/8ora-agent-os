@@ -67,4 +67,11 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   return json({allowed:true,reason:"One-use authority consumed"},200);
  }
  return json({error:"not found"},404);
+},async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
+ if(!env.FOUNDER_API_TOKEN)return;
+ const store=new Store(env.DB);
+ for(const draft of buildMarketingDrafts()){
+  const job=await store.createJob({tenantId:TENANT,actorId:OWNER,request:JSON.stringify(draft)});
+  await store.updateJob(job.id,"awaiting-approval","marketing-draft");
+ }
 }};
