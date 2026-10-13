@@ -39,7 +39,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const body=await request.json<{proposal?:ActionProposal;jobId?:string}>();
   if(!body.proposal||typeof body.proposal.toolId!=="string")return json({error:"invalid proposal"},400);
   const tool=listTools().find(t=>t.id===body.proposal!.toolId);
-  if(!tool||tool.permission==="BLOCKED")return json({error:"tool not permitted"},403);
+  if(!tool||tool.permission!=="READ")return json({error:"External tool approvals disabled until execution gateway is implemented"},403);
   const approval=await store.createApproval({tenantId:TENANT,actorId:OWNER,toolId:tool.id,jobId:body.jobId,argsHash:await hashArgs(body.proposal.args)});
   return json(approval,202);
  }
@@ -55,6 +55,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const tool=listTools().find(t=>t.id===proposal.toolId);
   if(!tool||tool.permission==="BLOCKED")return json({allowed:false,reason:"Tool unavailable"},403);
   if(tool.permission==="READ")return json({allowed:true,reason:"Read-only capability"},200);
+  return json({allowed:false,reason:"External execution disabled until a controlled gateway is implemented"},403);
   if(!body.approvalId)return json({allowed:false,reason:"Approval required"},403);
   const argsHash=await hashArgs(proposal.args);
   const now=Date.now();
@@ -68,7 +69,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  }
  return json({error:"not found"},404);
 },async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
- if(!env.FOUNDER_API_TOKEN)return;
+ if(!env.FOUNDER_API_TOKEN||env.MARKETING_ENABLED!=="true")return;
  const store=new Store(env.DB);
  const day=new Date().toISOString().slice(0,10);
  const drafts=buildMarketingDrafts();
