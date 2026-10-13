@@ -50,13 +50,19 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const body=await request.json<{proposal?:ActionProposal;approvalId?:string}>();
   if(!body.proposal)return json({error:"proposal required"},400);
   const proposal={...body.proposal,tenantId:TENANT,actorId:OWNER};
-  const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId):undefined;
-  const decision=authorize(proposal,authority);
-  if(decision.allowed&&authority){
-   const approval=await env.DB.prepare("SELECT args_hash argsHash FROM approvals WHERE id=? AND tenant_id=?").bind(authority.approvalId,TENANT).first<{argsHash:string}>();
-   if(!approval||approval.argsHash!==await hashArgs(proposal.args))return json({allowed:false,reason:"Arguments differ",approvalRequired:true},403);
-  }
-  return json(decision,decision.allowed?200:403);
+  const tool=listTools().find(t=>t.id===proposal.toolId);
+  if(!tool||tool.permission==="BLOCKED")return json({allowed:false,reason:"Tool unavailable"},403);
+  if(tool.permission==="READ")return json({allowed:true,reason:"Read-only capability"},200);
+  if(!body.approvalId)return json({allowed:false,reason:"Approval required"},403);
+  const argsHash=await hashArgs(proposal.args);
+  const now=Date.now();
+  // One-use atomic consume: the database, not the caller, decides whether authority exists.
+  const consumed=await env.DB.prepare(
+   "UPDATE approvals SET status='consumed' WHERE id=? AND tenant_id=? AND actor_id=? AND tool_id=? AND args_hash=? AND status='approved' AND expires_at>?"
+  ).bind(body.approvalId,TENANT,OWNER,proposal.toolId,argsHash,now).run();
+  if(consumed.meta.changes!==1)return json({allowed:false,reason:"Approval missing, expired, mismatched or already used"},403);
+  await store.audit("approval.consumed",{approvalId:body.approvalId,toolId:proposal.toolId},{tenantId:TENANT,actorId:OWNER});
+  return json({allowed:true,reason:"One-use authority consumed"},200);
  }
  return json({error:"not found"},404);
 }};
