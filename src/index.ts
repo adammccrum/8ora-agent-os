@@ -24,7 +24,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8","cache-control":"no-store"}});
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
- if(request.method==="GET"&&url.pathname==="/v1/jobs")return json((await store.listJobs()).filter(j=>j.tenantId===TENANT));
+ if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs(TENANT));
  if(request.method==="GET"&&url.pathname==="/v1/audit")return json(await store.listAudit(TENANT));
  if(request.method==="POST"&&url.pathname==="/v1/tasks"){
   const body=await request.json<{request?:string}>();
@@ -43,7 +43,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  }
  const match=url.pathname.match(/^\/v1\/approvals\/([^/]+)\/(approve|deny)$/);
  if(request.method==="POST"&&match){
-  const ok=await store.decideApproval(match[1],match[2]==="approve"?"approved":"denied",OWNER);
+  const ok=await store.decideApproval(match[1],match[2]==="approve"?"approved":"denied",OWNER,TENANT);
   return json({ok},ok?200:403);
  }
  if(request.method==="POST"&&url.pathname==="/v1/authority/check"){
