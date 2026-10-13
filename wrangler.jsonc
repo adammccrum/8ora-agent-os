@@ -1,6 +1,6 @@
 {
  "$schema":"node_modules/wrangler/config-schema.json",
- "name":"8ora-agent-os",
+ "name": "8ora-marketing-dev",
  "main":"src/index.ts",
  "compatibility_date":"2026-09-30",
  "observability":{"enabled":true},
@@ -8,7 +8,7 @@
  "d1_databases":[{
    "binding":"DB",
    "database_name":"8ora-agent-os",
-   "database_id":"REPLACE_WITH_D1_DATABASE_ID",
+   "database_id":"7d1c43a0-bac3-4dd9-85da-83b65d66a247",
    "migrations_dir":"migrations"
  }]
 }
