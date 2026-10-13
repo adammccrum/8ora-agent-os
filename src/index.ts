@@ -70,8 +70,11 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
 },async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
  if(!env.FOUNDER_API_TOKEN)return;
  const store=new Store(env.DB);
- for(const draft of buildMarketingDrafts()){
-  const job=await store.createJob({tenantId:TENANT,actorId:OWNER,request:JSON.stringify(draft)});
-  await store.updateJob(job.id,"awaiting-approval","marketing-draft");
+ const day=new Date().toISOString().slice(0,10);
+ const drafts=buildMarketingDrafts();
+ for(let i=0;i<drafts.length;i++){
+  const draft=drafts[i];
+  const id=`marketing:${day}:${i}`;
+  await store.createScheduledDraft({id,tenantId:TENANT,actorId:OWNER,request:JSON.stringify(draft)});
  }
 }};
