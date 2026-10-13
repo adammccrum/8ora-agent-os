@@ -3,7 +3,7 @@ import {buildMarketingDrafts} from "./marketing-drafts";
 import {orchestrate} from "./orchestrator";
 import {listAgents,listTools} from "./registry";
 import {Store} from "./storage";
-import type {Env} from "./types";
+import type {ActionProposal,Env} from "./types";
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data,null,2),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
 const OWNER="founder", TENANT="iriskey-internal";
 async function tokenMatches(actual:string,expected:string):Promise<boolean>{
