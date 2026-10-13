@@ -7,7 +7,7 @@
  "triggers":{"crons":["0 9 * * *"]},
  "d1_databases":[{
    "binding":"DB",
-   "database_name":"8ora-agent-os",
+   "database_name":"8ora-marketing-dev",
    "database_id":"7d1c43a0-bac3-4dd9-85da-83b65d66a247",
    "migrations_dir":"migrations"
  }]
