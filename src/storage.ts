@@ -18,7 +18,7 @@ export class Store {
  }
  async updateJob(id:string,status:JobStatus,agentId?:string){await this.db.prepare("UPDATE jobs SET status=?,agent_id=COALESCE(?,agent_id),updated_at=? WHERE id=?").bind(status,agentId??null,Date.now(),id).run();}
  async listJobs(){const r=await this.db.prepare("SELECT id,tenant_id tenantId,actor_id actorId,request,status,agent_id agentId,created_at createdAt,updated_at updatedAt FROM jobs ORDER BY created_at DESC LIMIT 100").all<Job>();return r.results;}
- async listAudit(){const r=await this.db.prepare("SELECT id,job_id jobId,tenant_id tenantId,actor_id actorId,type,data_json dataJson,created_at createdAt FROM audit_events ORDER BY seq DESC LIMIT 200").all();return r.results;}
+ async listAudit(tenantId:string){const r=await this.db.prepare("SELECT id,job_id jobId,tenant_id tenantId,actor_id actorId,type,data_json dataJson,created_at createdAt FROM audit_events WHERE tenant_id=? ORDER BY seq DESC LIMIT 200").bind(tenantId).all();return r.results;}
  async createApproval(input:{tenantId:string;actorId:string;toolId:string;jobId?:string;argsHash:string;ttlMs?:number}):Promise<ApprovalRecord>{
   const now=Date.now(),a:ApprovalRecord={approvalId:crypto.randomUUID(),tenantId:input.tenantId,actorId:input.actorId,toolId:input.toolId,jobId:input.jobId,status:"pending",argsHash:input.argsHash,createdAt:now,expiresAt:now+(input.ttlMs??300000)};
   await this.db.prepare("INSERT INTO approvals(id,tenant_id,actor_id,tool_id,job_id,status,args_hash,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)").bind(a.approvalId,a.tenantId,a.actorId,a.toolId,a.jobId??null,a.status,a.argsHash,a.createdAt,a.expiresAt).run();
