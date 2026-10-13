@@ -4,4 +4,4 @@ export interface AgentDefinition {id:string;name:string;division:string;descript
 export interface ToolDefinition {id:string;description:string;permission:Permission}
 export interface ActionProposal {toolId:string;args:unknown;tenantId:string;actorId:string}
 export interface Authority {approvalId:string;tenantId:string;actorId:string;toolId:string;expiresAt:number}
-export interface Env {DB:D1Database;FOUNDER_API_TOKEN?:string;OMNIROUTE_BASE_URL?:string;OMNIROUTE_API_KEY?:string}
+export interface Env {DB:D1Database;FOUNDER_API_TOKEN?:string;MARKETING_ENABLED?:string;OMNIROUTE_BASE_URL?:string;OMNIROUTE_API_KEY?:string}
