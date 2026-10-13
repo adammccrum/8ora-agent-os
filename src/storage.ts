@@ -16,6 +16,14 @@ export class Store {
    this.db.prepare("INSERT INTO audit_events(id,job_id,tenant_id,actor_id,type,data_json,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),job.id,job.tenantId,job.actorId,"job.created","{}",now)
   ]); return job;
  }
+ async createScheduledDraft(input:{id:string;tenantId:string;actorId:string;request:string}):Promise<boolean>{
+  const now=Date.now();
+  const result=await this.db.prepare("INSERT OR IGNORE INTO jobs(id,tenant_id,actor_id,request,status,agent_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)")
+   .bind(input.id,input.tenantId,input.actorId,input.request,"awaiting-approval","marketing-draft",now,now).run();
+  if(result.meta.changes!==1)return false;
+  await this.audit("marketing.draft.created",{jobId:input.id},{jobId:input.id,tenantId:input.tenantId,actorId:input.actorId});
+  return true;
+ }
  async updateJob(id:string,status:JobStatus,agentId?:string){await this.db.prepare("UPDATE jobs SET status=?,agent_id=COALESCE(?,agent_id),updated_at=? WHERE id=?").bind(status,agentId??null,Date.now(),id).run();}
  async listJobs(tenantId:string){const r=await this.db.prepare("SELECT id,tenant_id tenantId,actor_id actorId,request,status,agent_id agentId,created_at createdAt,updated_at updatedAt FROM jobs WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100").bind(tenantId).all<Job>();return r.results;}
  async listAudit(tenantId:string){const r=await this.db.prepare("SELECT id,job_id jobId,tenant_id tenantId,actor_id actorId,type,data_json dataJson,created_at createdAt FROM audit_events WHERE tenant_id=? ORDER BY seq DESC LIMIT 200").bind(tenantId).all();return r.results;}
