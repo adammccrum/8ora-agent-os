@@ -25,7 +25,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
  if(request.method==="GET"&&url.pathname==="/v1/jobs")return json((await store.listJobs()).filter(j=>j.tenantId===TENANT));
- if(request.method==="GET"&&url.pathname==="/v1/audit")return json((await store.listAudit()).filter((e:any)=>e.tenantId===TENANT));
+ if(request.method==="GET"&&url.pathname==="/v1/audit")return json(await store.listAudit(TENANT));
  if(request.method==="POST"&&url.pathname==="/v1/tasks"){
   const body=await request.json<{request?:string}>();
   if(typeof body.request!=="string"||!body.request.trim()||body.request.length>4000)return json({error:"invalid request"},400);
