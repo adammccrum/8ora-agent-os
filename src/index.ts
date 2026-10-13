@@ -1,6 +1,7 @@
 import {authorize} from "./authority";
 import {dashboardHtml} from "./dashboard";
 import {hashArgs} from "./hash";
+import {buildMarketingDrafts} from "./marketing-drafts";
 import {orchestrate} from "./orchestrator";
 import {listAgents,listTools} from "./registry";
 import {Store} from "./storage";
@@ -22,6 +23,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  const supplied=request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
  if(!secret||!supplied||!(await tokenMatches(supplied,secret)))return json({error:"unauthorized"},401);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8","cache-control":"no-store"}});
+ if(request.method==="GET"&&url.pathname==="/v1/marketing/drafts")return json({drafts:buildMarketingDrafts(),status:"draft-only",published:false});
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
  if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs(TENANT));
