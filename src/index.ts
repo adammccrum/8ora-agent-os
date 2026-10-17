@@ -20,6 +20,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="POST"&&url.pathname==="/v1/brain2/queue"){
   const body=await request.json<{pipeline?:string;agentId?:string;task?:unknown;dueAt?:number}>().catch(()=>null);
   if(!body||!["iriskey","8ora","internal"].includes(body.pipeline??"")||!listAgents().some(a=>a.id===body.agentId)||body.task===undefined||!Number.isFinite(body.dueAt)||body.dueAt! < 0)return json({error:"invalid queue task"},400);
+  const serialized=JSON.stringify(body.task);
+  if(serialized.length>16384)return json({error:"queue task exceeds 16 KiB limit"},413);
   const id=await enqueue(env,{tenantId:principal!.tenantId,actorId:principal!.actorId,pipeline:body.pipeline as "iriskey"|"8ora"|"internal",agentId:body.agentId!,task:body.task,dueAt:body.dueAt!});
   return json({id,status:"queued",executionEnabled:false},202);
  }
