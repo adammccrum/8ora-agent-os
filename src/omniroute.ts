@@ -7,7 +7,7 @@ export interface ModelRequest {
 
 export async function routeModel(env: Env, request: ModelRequest): Promise<unknown> {
   if (!env.OMNIROUTE_BASE_URL || !env.OMNIROUTE_API_KEY) {
-    return { mode: "mock", profile: request.profile, reason: "OmniRoute credentials not configured" };
+    throw new Error("Model unavailable: OmniRoute credentials not configured");
   }
 
   const response = await fetch(new URL("/v1/route", env.OMNIROUTE_BASE_URL), {
