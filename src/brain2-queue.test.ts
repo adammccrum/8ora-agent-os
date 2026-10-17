@@ -1,4 +1,4 @@
-import {describe,it,expect,vi} from "vitest";
+import {describe,it,expect} from "vitest";
 import {claimDue,completeTask,enqueue} from "./brain2-queue";
 import type {Env} from "./types";
 function fakeDb(rows:Record<string,unknown>[]=[]){
