@@ -67,10 +67,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   if(body.proposal.tenantId!==principal!.tenantId||body.proposal.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
   const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId):undefined;
   const decision=authorize(body.proposal,authority);
-  if(decision.allowed&&authority){
-   const consumed=await store.consumeApprovedAuthority(authority.approvalId,principal!.tenantId,principal!.actorId,body.proposal.toolId,await hashArgs(body.proposal.args));
-   if(!consumed)return json({allowed:false,reason:"Approval expired, mismatched or already used",approvalRequired:true},403);
-  }
+  // A read-only check must never consume a single-use approval.
+  // Approval consumption belongs in the atomic, authority-gated action executor.
   return json(decision,decision.allowed?200:403);
  }
  return json({error:"not found"},404);
