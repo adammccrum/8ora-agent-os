@@ -17,6 +17,10 @@ export async function listOpenIncidents(env:Env,tenantId:string){
  const result=await env.DB.prepare("SELECT id,pipeline,queue_id queueId,severity,category,summary,occurrences,first_seen_at firstSeenAt,last_seen_at lastSeenAt,status FROM brain2_incidents WHERE tenant_id=? AND status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 100").bind(tenantId).all();
  return result.results;
 }
+export async function resolveIncident(env:Env,tenantId:string,id:string){
+ const result=await env.DB.prepare("UPDATE brain2_incidents SET status='resolved',resolved_at=? WHERE id=? AND tenant_id=? AND status IN ('open','acknowledged')").bind(Date.now(),id,tenantId).run();
+ return result.meta.changes===1;
+}
 export async function acknowledgeIncident(env:Env,tenantId:string,id:string){
  const result=await env.DB.prepare("UPDATE brain2_incidents SET status='acknowledged',acknowledged_at=? WHERE id=? AND tenant_id=? AND status='open'").bind(Date.now(),id,tenantId).run();
  return result.meta.changes===1;
