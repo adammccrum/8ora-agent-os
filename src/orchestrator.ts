@@ -8,6 +8,8 @@ export async function orchestrate(env: Env, request: string) {
   const plan = chooseModel(agent,request);
   const model = await routeModel(env, {
     profile: plan.profile,
+    tier: plan.tier,
+    freeOnly: true,
     messages: [
       { role: "system", content: `You are ${agent.name}. Stay within your declared capabilities and tools.` },
       { role: "user", content: request }
