@@ -13,7 +13,7 @@ const json=(data:unknown,status=200)=>new Response(JSON.stringify(data,null,2),{
 export default {async fetch(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url),store=new Store(env.DB);
  const principal=founderPrincipal(request,env);
- if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8"}});
+ if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
  if(url.pathname!=="/health"&&!principal)return json({error:"founder authentication required"},401);
  if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,productionConnected:false,autonomousExecutionEnabled:false});
  if(request.method==="GET"&&url.pathname==="/ready"){
