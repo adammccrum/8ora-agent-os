@@ -1,4 +1,5 @@
 import {authorize} from "./authority";
+import {founderPrincipal} from "./founder-auth";
 import {dashboardHtml} from "./dashboard";
 import {hashArgs} from "./hash";
 import {orchestrate} from "./orchestrator";
@@ -9,16 +10,18 @@ const json=(data:unknown,status=200)=>new Response(JSON.stringify(data,null,2),{
 
 export default {async fetch(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url),store=new Store(env.DB);
+ const principal=founderPrincipal(request,env);
+ if(url.pathname!=="/health"&&!principal)return json({error:"founder authentication required"},401);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8"}});
  if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,persistence:"D1",productionConnected:false});
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
- if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs());
- if(request.method==="GET"&&url.pathname==="/v1/audit")return json(await store.listAudit());
+ if(request.method==="GET"&&url.pathname==="/v1/jobs")return json((await store.listJobs()).filter(j=>j.tenantId===principal!.tenantId&&j.actorId===principal!.actorId));
+ if(request.method==="GET"&&url.pathname==="/v1/audit")return json((await store.listAudit()).filter((e:any)=>e.tenantId===principal!.tenantId&&e.actorId===principal!.actorId));
 
  if(request.method==="POST"&&url.pathname==="/v1/tasks"){
   const body=await request.json<{request?:string;tenantId?:string;actorId?:string}>();
-  if(!body.request||!body.tenantId||!body.actorId)return json({error:"request, tenantId and actorId are required"},400);
+  if(!body.request||body.tenantId!==principal!.tenantId||body.actorId!==principal!.actorId)return json({error:"request, tenantId and actorId are required"},400);
   const job=await store.createJob({request:body.request,tenantId:body.tenantId,actorId:body.actorId});
   try{const result=await orchestrate(env,body.request);await store.updateJob(job.id,"planned",result.agent.id);await store.audit("orchestration.planned",{agent:result.agent},{jobId:job.id,tenantId:job.tenantId,actorId:job.actorId});return json({jobId:job.id,...result},202)}
   catch(error){await store.updateJob(job.id,"failed");await store.audit("orchestration.failed",{error:error instanceof Error?error.message:"unknown"},{jobId:job.id,tenantId:job.tenantId,actorId:job.actorId});return json({jobId:job.id,error:"orchestration failed"},502)}
@@ -27,6 +30,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="POST"&&url.pathname==="/v1/approvals"){
   const body=await request.json<{proposal?:ActionProposal;jobId?:string}>();
   if(!body.proposal)return json({error:"proposal is required"},400);
+  if(body.proposal.tenantId!==principal!.tenantId||body.proposal.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
   const tool=listTools().find(t=>t.id===body.proposal!.toolId);
   if(!tool)return json({error:"unknown tool fails closed"},403);
   if(tool.permission==="BLOCKED")return json({error:"tool is blocked"},403);
@@ -37,7 +41,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  const approvalMatch=url.pathname.match(/^\/v1\/approvals\/([^/]+)\/(approve|deny)$/);
  if(request.method==="POST"&&approvalMatch){
   const body=await request.json<{actorId?:string}>();
-  if(!body.actorId)return json({error:"actorId is required"},400);
+  if(body.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
   const ok=await store.decideApproval(approvalMatch[1],approvalMatch[2]==="approve"?"approved":"denied",body.actorId);
   return json({ok},ok?200:403);
  }
