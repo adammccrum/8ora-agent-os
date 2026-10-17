@@ -1,5 +1,5 @@
 import {authorize} from "./authority";
-import {listOpenIncidents,acknowledgeIncident,reportIncident} from "./brain2-incidents";
+import {listOpenIncidents,acknowledgeIncident,reportIncident,criticalIncidentFeed} from "./brain2-incidents";
 import {recoverExpired,queueHealth,enqueue} from "./brain2-queue";
 import {founderPrincipal} from "./founder-auth";
 import {dashboardHtml} from "./dashboard";
@@ -22,6 +22,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const id=await enqueue(env,{tenantId:principal!.tenantId,actorId:principal!.actorId,pipeline:body.pipeline as "iriskey"|"8ora"|"internal",agentId:body.agentId!,task:body.task,dueAt:body.dueAt!});
   return json({id,status:"queued",executionEnabled:false},202);
  }
+ if(request.method==="GET"&&url.pathname==="/v1/brain2/incidents/critical-feed")return json(await criticalIncidentFeed(env,principal!.tenantId));
  if(request.method==="GET"&&url.pathname==="/v1/brain2/incidents")return json(await listOpenIncidents(env,principal!.tenantId));
  const incidentAck=url.pathname.match(/^\\/v1\\/brain2\\/incidents\\/([^/]+)\\/acknowledge$/);
  if(request.method==="POST"&&incidentAck)return json({ok:await acknowledgeIncident(env,principal!.tenantId,incidentAck[1])});
