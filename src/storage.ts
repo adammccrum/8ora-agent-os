@@ -33,6 +33,13 @@ export class Store {
   if(result.meta.changes!==1)return false;
   await this.audit("approval.decided",{approvalId:id,decision},{jobId:row.job_id as string|undefined,tenantId:String(row.tenant_id),actorId:deciderActorId}); return true;
  }
+ async consumeApprovedAuthority(id:string,tenantId:string,actorId:string,toolId:string,argsHash:string):Promise<boolean>{
+  const now=Date.now();
+  const r=await this.db.prepare("UPDATE approvals SET status='consumed',decided_at=? WHERE id=? AND tenant_id=? AND actor_id=? AND tool_id=? AND args_hash=? AND status='approved' AND expires_at>?").bind(now,id,tenantId,actorId,toolId,argsHash,now).run();
+  if(r.meta.changes!==1)return false;
+  await this.audit("approval.consumed",{approvalId:id,toolId},{tenantId,actorId});
+  return true;
+ }
  async getApprovedAuthority(id:string):Promise<Authority|undefined>{
   const r=await this.db.prepare("SELECT id,tenant_id,actor_id,tool_id,expires_at,status FROM approvals WHERE id=?").bind(id).first<Record<string,unknown>>();
   if(!r||r.status!=="approved"||Number(r.expires_at)<=Date.now()) return undefined;
