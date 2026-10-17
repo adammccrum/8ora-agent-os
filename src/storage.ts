@@ -40,8 +40,8 @@ export class Store {
   await this.audit("approval.consumed",{approvalId:id,toolId},{tenantId,actorId});
   return true;
  }
- async getApprovedAuthority(id:string):Promise<Authority|undefined>{
-  const r=await this.db.prepare("SELECT id,tenant_id,actor_id,tool_id,expires_at,status FROM approvals WHERE id=?").bind(id).first<Record<string,unknown>>();
+ async getApprovedAuthority(id:string,tenantId:string,actorId:string,toolId:string,argsHash:string):Promise<Authority|undefined>{
+  const r=await this.db.prepare("SELECT id,tenant_id,actor_id,tool_id,expires_at,status FROM approvals WHERE id=? AND tenant_id=? AND actor_id=? AND tool_id=? AND args_hash=?").bind(id,tenantId,actorId,toolId,argsHash).first<Record<string,unknown>>();
   if(!r||r.status!=="approved"||Number(r.expires_at)<=Date.now()) return undefined;
   return {approvalId:String(r.id),tenantId:String(r.tenant_id),actorId:String(r.actor_id),toolId:String(r.tool_id),expiresAt:Number(r.expires_at)};
  }
