@@ -18,13 +18,6 @@ jobs:
       - run: npm test
       - name: Verify Cloudflare Worker bundles without deployment
         run: npx wrangler deploy --dry-run --outdir dist/worker-check
-      - name: Export verified bundle for connected Cloudflare release
-        if: github.ref == 'refs/heads/feat/private-brain-24x7' && github.event_name == 'push'
-        run: |
-          echo 'BRAIN2_BUNDLE_BEGIN'
-          base64 -w 0 dist/worker-check/index.js
-          echo
-          echo 'BRAIN2_BUNDLE_END'
       - name: Preserve verified Worker build for deployment
         uses: actions/upload-artifact@v4
         with:
