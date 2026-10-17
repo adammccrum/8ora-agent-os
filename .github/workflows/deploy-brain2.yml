@@ -24,8 +24,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.BRAIN2_CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.BRAIN2_CLOUDFLARE_API_TOKEN }}
         run: |
-          test "$CLOUDFLARE_ACCOUNT_ID" = "e5aaa129d84357470def077613f3200e"
-          test -n "$CLOUDFLARE_API_TOKEN"
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "::error::BRAIN2_CLOUDFLARE_ACCOUNT_ID is missing from this job. Check repository vs brain2-production environment secrets."; exit 1; fi
+          if [ "$CLOUDFLARE_ACCOUNT_ID" != "e5aaa129d84357470def077613f3200e" ]; then echo "::error::BRAIN2_CLOUDFLARE_ACCOUNT_ID does not match the target Cloudflare account. Check whitespace and environment scope."; exit 1; fi
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::error::BRAIN2_CLOUDFLARE_API_TOKEN is missing from this job. Check repository vs brain2-production environment secrets."; exit 1; fi
           grep -q '"name": "8ora-agent-os"' wrangler.jsonc
           grep -q 'dea5f56c-3636-494a-9c2a-6a90fd32a078' wrangler.jsonc
       - name: Deploy only 8ora-agent-os (no other website)
