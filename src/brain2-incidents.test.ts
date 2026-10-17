@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {reportIncident,listOpenIncidents,acknowledgeIncident,criticalIncidentFeed} from "./brain2-incidents";
+import {reportIncident,listOpenIncidents,acknowledgeIncident,criticalIncidentFeed,resolveIncident} from "./brain2-incidents";
 import type {Env} from "./types";
 function fakeDb(){
  const calls:{sql:string;args:unknown[]}[]=[];
@@ -11,5 +11,7 @@ describe("Brain 2 incident escalation",()=>{
  it("reads only founder-scoped open incidents",async()=>{const {env,calls}=fakeDb();expect(await listOpenIncidents(env,"founder")).toEqual([]);expect(calls[0].sql).toContain("tenant_id=?");expect(calls[0].args).toEqual(["founder"])});
  it("acknowledges only an incident in the same tenant",async()=>{const {env,calls}=fakeDb();expect(await acknowledgeIncident(env,"founder","incident1")).toBe(true);expect(calls[0].args).toContain("founder");expect(calls[0].sql).toContain("status='open'")});
  it("exposes only critical open incidents without claiming delivery",async()=>{const {env,calls}=fakeDb();expect(await criticalIncidentFeed(env,"founder")).toEqual({deliveryConfigured:false,items:[]});expect(calls[0].sql).toContain("severity='critical'");expect(calls[0].args).toEqual(["founder"])});
+
+ it("resolves only founder-owned open or acknowledged incidents",async()=>{const {env,calls}=fakeDb();expect(await resolveIncident(env,"founder","incident1")).toBe(true);expect(calls[0].sql).toContain("tenant_id=?");expect(calls[0].args).toContain("founder")});
 
 });
