@@ -22,5 +22,9 @@ export async function routeModel(env: Env, request: ModelRequest): Promise<unkno
     body: JSON.stringify(request)
   });
   if (!response.ok) throw new Error(`OmniRoute failed: ${response.status}`);
-  return response.json();
+  const result:unknown=await response.json();
+  if(typeof result!=="object"||result===null||Array.isArray(result))throw new Error("OmniRoute invalid response");
+  const meta=result as Record<string,unknown>;
+  if(meta.tier!==request.tier||meta.freeOnly!==true||meta.billable===true||typeof meta.model!=="string"||!meta.model.trim())throw new Error("OmniRoute did not attest free-only model tier; response rejected");
+  return result;
 }
