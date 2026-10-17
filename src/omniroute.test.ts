@@ -16,12 +16,16 @@ describe("OmniRoute safety contract",()=>{
   expect(fetchMock).not.toHaveBeenCalled();
  });
  it("forwards SLM tier and free-only flag to the router",async()=>{
-  const fetchMock=vi.fn().mockResolvedValue({ok:true,json:async()=>({output:"draft"})});
+  const fetchMock=vi.fn().mockResolvedValue({ok:true,json:async()=>({output:"draft",tier:"slm",freeOnly:true,billable:false,model:"test-slm"})});
   vi.stubGlobal("fetch",fetchMock);
   await routeModel(env,{profile:"fast",tier:"slm",freeOnly:true,messages});
   const [url,init]=fetchMock.mock.calls[0];
   expect(String(url)).toBe("https://router.example/v1/route");
   expect(JSON.parse(init.body)).toMatchObject({tier:"slm",freeOnly:true});
+ });
+ it("rejects router output without verified free-tier attestation",async()=>{
+  vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,json:async()=>({output:"draft"})}));
+  await expect(routeModel(env,{profile:"fast",tier:"slm",freeOnly:true,messages})).rejects.toThrow("did not attest");
  });
  it("rejects upstream failures without a paid fallback",async()=>{
   vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:false,status:429}));
