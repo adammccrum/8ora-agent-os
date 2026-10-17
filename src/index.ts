@@ -1,4 +1,5 @@
 import {authorize} from "./authority";
+import {recoverExpired,queueHealth} from "./brain2-queue";
 import {founderPrincipal} from "./founder-auth";
 import {dashboardHtml} from "./dashboard";
 import {hashArgs} from "./hash";
@@ -14,6 +15,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(url.pathname!=="/health"&&!principal)return json({error:"founder authentication required"},401);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8"}});
  if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,persistence:"D1",productionConnected:false});
+ if(request.method==="GET"&&url.pathname==="/v1/brain2/queue/health")return json(await queueHealth(env,principal!.tenantId));
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
  if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs(principal!.tenantId,principal!.actorId));
@@ -59,4 +61,10 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   return json(decision,decision.allowed?200:403);
  }
  return json({error:"not found"},404);
-}};
+},
+async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
+ // Recovery only. Autonomous execution remains disabled until end-to-end authority tests pass.
+ if(!env.FOUNDER_TENANT_ID||!env.FOUNDER_ACTOR_ID||!env.FOUNDER_API_TOKEN||env.FOUNDER_API_TOKEN.length<32)return;
+ await recoverExpired(env,env.FOUNDER_TENANT_ID);
+}
+};
