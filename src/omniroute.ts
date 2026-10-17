@@ -2,6 +2,8 @@ import type { Env, ModelProfile } from "./types";
 
 export interface ModelRequest {
   profile: ModelProfile;
+  tier?: "slm"|"llm";
+  freeOnly?: boolean;
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
 }
 
@@ -10,6 +12,7 @@ export async function routeModel(env: Env, request: ModelRequest): Promise<unkno
     throw new Error("Model unavailable: OmniRoute credentials not configured");
   }
 
+  if(request.freeOnly!==true||!request.tier)throw new Error("Model unavailable: verified free model tier required");
   const response = await fetch(new URL("/v1/route", env.OMNIROUTE_BASE_URL), {
     method: "POST",
     headers: {
