@@ -21,3 +21,10 @@ export async function acknowledgeIncident(env:Env,tenantId:string,id:string){
  const result=await env.DB.prepare("UPDATE brain2_incidents SET status='acknowledged',acknowledged_at=? WHERE id=? AND tenant_id=? AND status='open'").bind(Date.now(),id,tenantId).run();
  return result.meta.changes===1;
 }
+
+/** A read-only alert feed for an approved, future ChatGPT/notification bridge. */
+export async function criticalIncidentFeed(env:Env,tenantId:string){
+ const result=await env.DB.prepare("SELECT id,pipeline,queue_id queueId,category,summary,occurrences,last_seen_at lastSeenAt FROM brain2_incidents WHERE tenant_id=? AND status='open' AND severity='critical' ORDER BY last_seen_at DESC LIMIT 50").bind(tenantId).all();
+ return {deliveryConfigured:false,items:result.results};
+}
+/** The inbox is not an outbound notification transport. Do not mark incidents delivered here. */
