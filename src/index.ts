@@ -16,8 +16,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,persistence:"D1",productionConnected:false});
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
- if(request.method==="GET"&&url.pathname==="/v1/jobs")return json((await store.listJobs()).filter(j=>j.tenantId===principal!.tenantId&&j.actorId===principal!.actorId));
- if(request.method==="GET"&&url.pathname==="/v1/audit")return json((await store.listAudit()).filter((e:any)=>e.tenantId===principal!.tenantId&&e.actorId===principal!.actorId));
+ if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs(principal!.tenantId,principal!.actorId));
+ if(request.method==="GET"&&url.pathname==="/v1/audit")return json(await store.listAudit(principal!.tenantId,principal!.actorId));
 
  if(request.method==="POST"&&url.pathname==="/v1/tasks"){
   const body=await request.json<{request?:string;tenantId?:string;actorId?:string}>();
@@ -49,6 +49,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="POST"&&url.pathname==="/v1/authority/check"){
   const body=await request.json<{proposal?:ActionProposal;approvalId?:string}>();
   if(!body.proposal)return json({error:"proposal is required"},400);
+  if(body.proposal.tenantId!==principal!.tenantId||body.proposal.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
   const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId):undefined;
   const decision=authorize(body.proposal,authority);
   if(decision.allowed&&authority){
