@@ -4,7 +4,7 @@ on:
     branches: [main, feat/private-brain-24x7]
   pull_request:
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -18,6 +18,18 @@ jobs:
       - run: npm test
       - name: Verify Cloudflare Worker bundles without deployment
         run: npx wrangler deploy --dry-run --outdir dist/worker-check
+      - name: Commit validated bundle to isolated release path
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/private-brain-24x7'
+        run: |
+          mkdir -p release
+          cp dist/worker-check/index.js release/worker.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/worker.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: validated Worker bundle [skip ci]'
+            git push
+          fi
       - name: Preserve verified Worker build for deployment
         uses: actions/upload-artifact@v4
         with:
