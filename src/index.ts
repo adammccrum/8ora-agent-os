@@ -67,7 +67,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const body=await request.json<{proposal?:ActionProposal;approvalId?:string}>();
   if(!body.proposal)return json({error:"proposal is required"},400);
   if(body.proposal.tenantId!==principal!.tenantId||body.proposal.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
-  const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId):undefined;
+  const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId,principal!.tenantId,principal!.actorId,body.proposal.toolId,await hashArgs(body.proposal.args)):undefined;
   const decision=authorize(body.proposal,authority);
   // A read-only check must never consume a single-use approval.
   // Approval consumption belongs in the atomic, authority-gated action executor.
