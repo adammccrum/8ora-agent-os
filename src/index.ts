@@ -1,5 +1,5 @@
 import {authorize} from "./authority";
-import {recoverExpired,queueHealth} from "./brain2-queue";
+import {recoverExpired,queueHealth,enqueue} from "./brain2-queue";
 import {founderPrincipal} from "./founder-auth";
 import {dashboardHtml} from "./dashboard";
 import {hashArgs} from "./hash";
@@ -15,6 +15,12 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(url.pathname!=="/health"&&!principal)return json({error:"founder authentication required"},401);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8"}});
  if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,persistence:"D1",productionConnected:false});
+ if(request.method==="POST"&&url.pathname==="/v1/brain2/queue"){
+  const body=await request.json<{pipeline?:string;agentId?:string;task?:unknown;dueAt?:number}>().catch(()=>null);
+  if(!body||!["iriskey","8ora","internal"].includes(body.pipeline??"")||!listAgents().some(a=>a.id===body.agentId)||body.task===undefined||!Number.isFinite(body.dueAt)||body.dueAt!<0)return json({error:"invalid queue task"},400);
+  const id=await enqueue(env,{tenantId:principal!.tenantId,actorId:principal!.actorId,pipeline:body.pipeline as "iriskey"|"8ora"|"internal",agentId:body.agentId!,task:body.task,dueAt:body.dueAt!});
+  return json({id,status:"queued",executionEnabled:false},202);
+ }
  if(request.method==="GET"&&url.pathname==="/v1/brain2/queue/health")return json(await queueHealth(env,principal!.tenantId));
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
