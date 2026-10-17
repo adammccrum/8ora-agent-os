@@ -6,5 +6,5 @@ const llmAgents=new Set(["engineering-researcher","software-engineer","testing-e
 export function chooseModel(agent:AgentDefinition,request:string):ModelPlan{
  const complex=/(patent claim|formal verification|complex simulation|safety critical|legal opinion|advanced coding|multi-step proof)/i.test(request);
  const tier:ModelTier=complex||llmAgents.has(agent.id)?"llm":"slm";
- return {tier,profile:agent.modelProfile,reason:tier==="slm"?"Routine specialist task; small-model first":"Complex or engineering task; larger-model route requires availability",requiresFreeRoute:true};
+ return {tier,profile:tier==="slm"?"fast":agent.modelProfile,reason:tier==="slm"?"Routine specialist task; small-model first":"Complex or engineering task; larger-model route requires availability",requiresFreeRoute:true};
 }
