@@ -1,50 +1,100 @@
-import type { AgentDefinition, ToolDefinition } from "./types";
+import type { ModelProfile, TaskMode, ToolDefinition, UniversalAgentDefinition } from "./types";
 
-const agents: AgentDefinition[] = [
+const universalAgent: UniversalAgentDefinition = {
+  id: "iriskey-universal",
+  name: "IrisKey Universal Agent",
+  description: "One adaptive agent that selects capabilities and tools for the task while all consequential actions remain authority-gated.",
+  capabilities: [
+    "research",
+    "analyse",
+    "reason",
+    "code",
+    "debug",
+    "security",
+    "draft",
+    "documents",
+    "data",
+    "plan",
+    "route"
+  ],
+  allowedTools: [
+    "knowledge.read",
+    "github.read",
+    "web.read",
+    "github.create_issue"
+  ],
+  defaultModelProfile: "reasoning"
+};
+
+const tools: ToolDefinition[] = [
+  { id: "knowledge.read", description: "Read approved internal knowledge", permission: "READ" },
+  { id: "github.read", description: "Read from an approved GitHub target", permission: "READ" },
+  { id: "web.read", description: "Read an external web resource without changing it", permission: "READ" },
+  { id: "github.create_issue", description: "Create an issue in an approved GitHub repository", permission: "EXTERNAL" }
+];
+
+const modes: Array<{ id: string; label: string; profile: ModelProfile; keywords: string[]; capabilities: string[] }> = [
   {
-    id: "ora-general",
-    name: "ORA General",
-    division: "orchestration",
-    description: "Safe fallback agent for general planning and analysis.",
-    capabilities: ["plan", "analyse", "route"],
-    allowedTools: ["knowledge.read"],
-    modelProfile: "reasoning"
+    id: "coding",
+    label: "Coding",
+    profile: "coding",
+    keywords: ["code", "bug", "github", "repo", "typescript", "javascript", "python", "build", "debug", "test"],
+    capabilities: ["code", "debug", "security", "analyse"]
   },
   {
-    id: "software-engineer",
-    name: "Software Engineer",
-    division: "engineering",
-    description: "Designs, reviews and prepares software changes.",
-    capabilities: ["code", "debug", "architecture", "test"],
-    allowedTools: ["knowledge.read", "github.write"],
-    modelProfile: "coding"
+    id: "research",
+    label: "Research",
+    profile: "long-context",
+    keywords: ["research", "investigate", "compare", "evidence", "paper", "patent", "study"],
+    capabilities: ["research", "analyse", "reason"]
   },
   {
-    id: "researcher",
-    name: "Researcher",
-    division: "research",
-    description: "Researches and synthesises evidence.",
-    capabilities: ["research", "analyse", "summarise"],
-    allowedTools: ["knowledge.read", "web.external"],
-    modelProfile: "long-context"
+    id: "fast",
+    label: "Fast task",
+    profile: "fast",
+    keywords: ["quick", "short", "summarise", "summarize"],
+    capabilities: ["analyse", "draft"]
   }
 ];
 
-const tools: ToolDefinition[] = [
-  { id: "knowledge.read", description: "Read approved knowledge", permission: "READ" },
-  { id: "github.write", description: "Write to an approved GitHub target", permission: "EXTERNAL" },
-  { id: "web.external", description: "Access an external network resource", permission: "EXTERNAL" }
-];
+export function getUniversalAgent(): UniversalAgentDefinition {
+  return universalAgent;
+}
 
-export function listAgents() { return agents; }
-export function listTools() { return tools; }
-export function getTool(id: string) { return tools.find(t => t.id === id); }
+export function listAgents(): UniversalAgentDefinition[] {
+  return [universalAgent];
+}
 
-export function selectAgent(request: string): AgentDefinition {
+export function listTools(): ToolDefinition[] {
+  return tools;
+}
+
+export function getTool(id: string): ToolDefinition | undefined {
+  return tools.find(tool => tool.id === id);
+}
+
+export function selectTaskMode(request: string): TaskMode {
   const q = request.toLowerCase();
-  const scored = agents.map(agent => ({
-    agent,
-    score: agent.capabilities.reduce((n, c) => n + (q.includes(c) ? 1 : 0), 0)
-  })).sort((a, b) => b.score - a.score);
-  return scored[0]?.score ? scored[0].agent : agents[0];
+  const match = modes
+    .map(mode => ({
+      mode,
+      score: mode.keywords.reduce((score, keyword) => score + (q.includes(keyword) ? 1 : 0), 0)
+    }))
+    .sort((a, b) => b.score - a.score)[0];
+
+  if (!match || match.score === 0) {
+    return {
+      id: "general",
+      label: "General reasoning",
+      modelProfile: universalAgent.defaultModelProfile,
+      capabilities: ["reason", "analyse", "plan", "draft"]
+    };
+  }
+
+  return {
+    id: match.mode.id,
+    label: match.mode.label,
+    modelProfile: match.mode.profile,
+    capabilities: match.mode.capabilities
+  };
 }
