@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "8ora-agent-os",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "dea5f56c-3636-494a-9c2a-6a90fd32a078",
       "migrations_dir": "migrations"
     }
   ],
