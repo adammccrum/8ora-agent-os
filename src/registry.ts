@@ -33,15 +33,6 @@ const agents: AgentDefinition[] = [
   {"id":"finance-analyst","name":"Finance Analyst","division":"operations","description":"Draft-only Finance Analyst specialist; no independent external actions.","capabilities":["finance","budget"],"allowedTools":["knowledge.read"],"modelProfile":"reasoning"},
   {"id":"operations-manager","name":"Operations Manager","division":"operations","description":"Draft-only Operations Manager specialist; no independent external actions.","capabilities":["operations","schedule"],"allowedTools":["knowledge.read"],"modelProfile":"reasoning"},
   {
-    id: "ora-general",
-    name: "ORA General",
-    division: "orchestration",
-    description: "Safe fallback agent for general planning and analysis.",
-    capabilities: ["plan", "analyse", "route"],
-    allowedTools: ["knowledge.read"],
-    modelProfile: "reasoning"
-  },
-  {
     id: "software-engineer",
     name: "Software Engineer",
     division: "engineering",
@@ -49,15 +40,6 @@ const agents: AgentDefinition[] = [
     capabilities: ["code", "debug", "architecture", "test"],
     allowedTools: ["knowledge.read", "github.write"],
     modelProfile: "coding"
-  },
-  {
-    id: "researcher",
-    name: "Researcher",
-    division: "research",
-    description: "Researches and synthesises evidence.",
-    capabilities: ["research", "analyse", "summarise"],
-    allowedTools: ["knowledge.read", "web.external"],
-    modelProfile: "long-context"
   }
 ];
 
@@ -77,5 +59,5 @@ export function selectAgent(request: string): AgentDefinition {
     agent,
     score: agent.capabilities.reduce((n, c) => n + (q.includes(c) ? 1 : 0), 0)
   })).sort((a, b) => b.score - a.score);
-  return scored[0]?.score ? scored[0].agent : agents[0];
+  return scored[0]?.score ? scored[0].agent : agents.find(a=>a.id==="ora-director")!;
 }
