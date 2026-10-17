@@ -53,8 +53,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const authority=body.approvalId?await store.getApprovedAuthority(body.approvalId):undefined;
   const decision=authorize(body.proposal,authority);
   if(decision.allowed&&authority){
-   const approval=await env.DB.prepare("SELECT args_hash argsHash FROM approvals WHERE id=?").bind(authority.approvalId).first<{argsHash:string}>();
-   if(!approval||approval.argsHash!==await hashArgs(body.proposal.args))return json({allowed:false,reason:"Approved action arguments do not match",approvalRequired:true},403);
+   const consumed=await store.consumeApprovedAuthority(authority.approvalId,principal!.tenantId,principal!.actorId,body.proposal.toolId,await hashArgs(body.proposal.args));
+   if(!consumed)return json({allowed:false,reason:"Approval expired, mismatched or already used",approvalRequired:true},403);
   }
   return json(decision,decision.allowed?200:403);
  }
