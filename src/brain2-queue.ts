@@ -32,6 +32,12 @@ export async function recoverExpired(env:Env,tenantId:string,now=Date.now()):Pro
  const requeued=await env.DB.prepare("UPDATE brain2_queue SET status='queued',lease_until=NULL,due_at=?,last_error='lease expired: retry scheduled',updated_at=? WHERE tenant_id=? AND status='leased' AND lease_until<=? AND attempts<max_attempts").bind(now+30000,now,tenantId,now).run();
  return {requeued:requeued.meta.changes??0,dead:dead.meta.changes??0};
 }
+/** Emergency stop: prevent future leasing while retaining queued work for review. */
+export async function pauseQueue(env:Env,tenantId:string):Promise<number>{
+ const now=Date.now();
+ const result=await env.DB.prepare("UPDATE brain2_queue SET status='awaiting-approval',lease_until=NULL,updated_at=? WHERE tenant_id=? AND status IN ('queued','leased')").bind(now,tenantId).run();
+ return result.meta.changes??0;
+}
 /** Queue health only; deliberately does not call an LLM or perform any external action. */
 export async function queueHealth(env:Env,tenantId:string){
  const result=await env.DB.prepare("SELECT pipeline,status,COUNT(*) count FROM brain2_queue WHERE tenant_id=? GROUP BY pipeline,status").bind(tenantId).all<{pipeline:Pipeline;status:string;count:number}>();
