@@ -19,7 +19,7 @@ export async function completeTask(env:Env,id:string,tenantId:string,actorId:str
  if(!row)return false;
  const status=success?"completed":row.attempts>=row.max_attempts?"dead":"queued";
  const delay=success?0:Math.min(3600000,30000*2**Math.max(0,row.attempts-1));
- const updated=await env.DB.prepare("UPDATE brain2_queue SET status=?,due_at=?,lease_until=NULL,last_error=?,updated_at=? WHERE id=? AND tenant_id=? AND actor_id=? AND status='leased'").bind(status,now+delay,error??null,now,id,tenantId,actorId).run();
+ const updated=await env.DB.prepare("UPDATE brain2_queue SET status=?,due_at=?,lease_until=NULL,last_error=?,updated_at=? WHERE id=? AND tenant_id=? AND actor_id=? AND status='leased' AND attempts=? AND lease_until>?").bind(status,now+delay,error??null,now,id,tenantId,actorId,row.attempts,now).run();
  if(updated.meta.changes!==1)return false;
  await env.DB.prepare("INSERT INTO brain2_runs(id,queue_id,tenant_id,started_at,finished_at,outcome,details_json) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,tenantId,now,now,status,JSON.stringify({error:error??null})).run();
  if(status==="dead")await reportIncident(env,{tenantId,pipeline:row.pipeline,queueId:id,fingerprint:`queue-dead:${id}`,severity:"critical",category:"job-failed",summary:"Brain 2 job exhausted retries",details:{attempts:row.attempts,error:error??"unknown"}});
