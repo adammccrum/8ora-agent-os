@@ -15,7 +15,14 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  const principal=founderPrincipal(request,env);
  if(url.pathname!=="/health"&&!principal)return json({error:"founder authentication required"},401);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8"}});
- if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,persistence:"D1",productionConnected:false});
+ if(request.method==="GET"&&url.pathname==="/health")return json({ok:true,service:"8ora-agent-os",phase:1,productionConnected:false,autonomousExecutionEnabled:false});
+ if(request.method==="GET"&&url.pathname==="/ready"){
+  if(!principal)return json({ready:false,error:"founder authentication required"},401);
+  const authReady=Boolean(env.FOUNDER_API_TOKEN&&env.FOUNDER_API_TOKEN.length>=32&&env.FOUNDER_TENANT_ID&&env.FOUNDER_ACTOR_ID);
+  if(!authReady||!env.DB)return json({ready:false,reason:"missing required bindings"},503);
+  try{await env.DB.prepare("SELECT 1 FROM brain2_queue LIMIT 1").first();await env.DB.prepare("SELECT 1 FROM approvals LIMIT 1").first();return json({ready:true,service:"8ora-agent-os",database:"ok",autonomousExecutionEnabled:false});}
+  catch{return json({ready:false,reason:"database migrations incomplete or unavailable"},503)}
+ }
  if(request.method==="POST"&&url.pathname==="/v1/brain2/emergency-pause")return json({paused:await pauseQueue(env,principal!.tenantId),warning:"In-flight external work cannot be cancelled by this operation"});
  if(request.method==="POST"&&url.pathname==="/v1/brain2/queue"){
   const body=await request.json<{pipeline?:string;agentId?:string;task?:unknown;dueAt?:number}>().catch(()=>null);
