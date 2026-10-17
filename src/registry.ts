@@ -38,7 +38,7 @@ const agents: AgentDefinition[] = [
     division: "engineering",
     description: "Designs, reviews and prepares software changes.",
     capabilities: ["code", "debug", "architecture", "test"],
-    allowedTools: ["knowledge.read", "github.write"],
+    allowedTools: ["knowledge.read"],
     modelProfile: "coding"
   }
 ];
