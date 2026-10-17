@@ -11,7 +11,7 @@ describe("Brain 2 founder boundary",()=>{
 });
 describe("Brain 2 workforce",()=>{
  it("has exactly 32 unique agents",()=>{const agents=listAgents();expect(agents).toHaveLength(32);expect(new Set(agents.map(a=>a.id)).size).toBe(32)});
- it("routes SEO requests to SEO specialist",()=>expect(selectAgent("seo audit").id).toBe("seo-specialist");
+ it("routes SEO requests to SEO specialist",()=>expect(selectAgent("seo audit").id).toBe("seo-specialist"));
  it("routes unknown tasks to director",()=>expect(selectAgent("unrecognisable")).toHaveProperty("id","ora-director"));
  it("keeps specialist roles read-only",()=>expect(listAgents().filter(a=>a.id!=="software-engineer").every(a=>a.allowedTools.every(t=>t==="knowledge.read"))).toBe(true));
 });
