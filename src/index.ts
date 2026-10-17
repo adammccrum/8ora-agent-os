@@ -1,4 +1,5 @@
 import {authorize} from "./authority";
+import {listOpenIncidents,acknowledgeIncident,reportIncident} from "./brain2-incidents";
 import {recoverExpired,queueHealth,enqueue} from "./brain2-queue";
 import {founderPrincipal} from "./founder-auth";
 import {dashboardHtml} from "./dashboard";
@@ -21,6 +22,9 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   const id=await enqueue(env,{tenantId:principal!.tenantId,actorId:principal!.actorId,pipeline:body.pipeline as "iriskey"|"8ora"|"internal",agentId:body.agentId!,task:body.task,dueAt:body.dueAt!});
   return json({id,status:"queued",executionEnabled:false},202);
  }
+ if(request.method==="GET"&&url.pathname==="/v1/brain2/incidents")return json(await listOpenIncidents(env,principal!.tenantId));
+ const incidentAck=url.pathname.match(/^\\/v1\\/brain2\\/incidents\\/([^/]+)\\/acknowledge$/);
+ if(request.method==="POST"&&incidentAck)return json({ok:await acknowledgeIncident(env,principal!.tenantId,incidentAck[1])});
  if(request.method==="GET"&&url.pathname==="/v1/brain2/queue/health")return json(await queueHealth(env,principal!.tenantId));
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
@@ -71,6 +75,13 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
 async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
  // Recovery only. Autonomous execution remains disabled until end-to-end authority tests pass.
  if(!env.FOUNDER_TENANT_ID||!env.FOUNDER_ACTOR_ID||!env.FOUNDER_API_TOKEN||env.FOUNDER_API_TOKEN.length<32)return;
- await recoverExpired(env,env.FOUNDER_TENANT_ID);
+ try{
+  const recovered=await recoverExpired(env,env.FOUNDER_TENANT_ID);
+  if(recovered.dead>0)await reportIncident(env,{tenantId:env.FOUNDER_TENANT_ID,pipeline:"internal",fingerprint:"recovery-dead-letter",severity:"critical",category:"queue-recovery",summary:"Brain 2 jobs exhausted their retries",details:recovered});
+ }catch(error){
+  // A failed incident write must still fail the scheduled invocation for platform observability.
+  await reportIncident(env,{tenantId:env.FOUNDER_TENANT_ID,pipeline:"internal",fingerprint:"recovery-error",severity:"critical",category:"scheduler",summary:"Brain 2 scheduled recovery failed",details:{error:error instanceof Error?error.message:"unknown"}}).catch(()=>{});
+  throw error;
+ }
 }
 };
