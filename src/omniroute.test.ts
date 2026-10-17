@@ -27,6 +27,10 @@ describe("OmniRoute safety contract",()=>{
   vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,json:async()=>({output:"draft"})}));
   await expect(routeModel(env,{profile:"fast",tier:"slm",freeOnly:true,messages})).rejects.toThrow("did not attest");
  });
+ it("rejects ambiguous billing status even when the router claims free-only",async()=>{
+  vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,json:async()=>({tier:"slm",freeOnly:true,model:"test-slm"})}));
+  await expect(routeModel(env,{profile:"fast",tier:"slm",freeOnly:true,messages})).rejects.toThrow("did not attest");
+ });
  it("rejects upstream failures without a paid fallback",async()=>{
   vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:false,status:429}));
   await expect(routeModel(env,{profile:"fast",tier:"slm",freeOnly:true,messages})).rejects.toThrow("429");
