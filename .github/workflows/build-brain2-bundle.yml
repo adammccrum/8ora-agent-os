@@ -1,0 +1,27 @@
+name: Build Brain 2 bundle (no deployment)
+on:
+  push:
+    branches: [feat/private-brain-24x7]
+    paths:
+      - '.github/workflows/build-brain2-bundle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx wrangler deploy --dry-run --outdir dist/worker-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brain2-verified-worker
+          path: dist/worker-check/
+          if-no-files-found: error
+          retention-days: 3
