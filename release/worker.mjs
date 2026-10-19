@@ -1,6 +1,34 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
+// src/deployment-check.ts
+async function deploymentCheck(handle, env) {
+  const id = env.BRAIN2_DEPLOYMENT_CHECK_ID;
+  if (!id) return;
+  const row = await env.DB.prepare("SELECT value_json FROM brain2_memory WHERE tenant_id=? AND pipeline='internal' AND namespace='deployment-check' AND key=?").bind(env.FOUNDER_TENANT_ID, id).first();
+  if (row && JSON.parse(row.value_json).passed === true) return;
+  if (!env.FOUNDER_API_TOKEN || env.FOUNDER_API_TOKEN.length < 32) throw Error("Founder credential is missing or too short");
+  const headers = { authorization: "Bearer " + env.FOUNDER_API_TOKEN, "content-type": "application/json" };
+  const checks = {};
+  const run = /* @__PURE__ */ __name(async (name, path, status, body, auth = true) => {
+    const r = await handle(new Request("https://brain2.internal" + path, { method: body === void 0 ? "GET" : "POST", headers: auth ? headers : { "content-type": "application/json" }, ...body === void 0 ? {} : { body: JSON.stringify(body) } }));
+    checks[name] = r.status === status;
+    if (!checks[name]) throw Error("Deployment check failed: " + name);
+    return r;
+  }, "run");
+  await run("anonymous_denied", "/v1/jobs", 401, void 0, false);
+  const ready = await (await run("founder_readiness", "/ready", 200)).json();
+  if (!ready.ready || !ready.modelConfigured || ready.autonomousExecutionEnabled) throw Error("Readiness boundary failed");
+  for (const path of ["/v1/agents", "/v1/jobs", "/v1/audit", "/v1/brain2/queue/health"]) await run(path, path, 200);
+  await run("tenant_spoof_denied", "/v1/tasks", 403, { request: "Deployment boundary test", tenantId: "deployment-other-tenant", actorId: "deployment-other-actor" });
+  await run("unknown_tool_denied", "/v1/authority/check", 403, { proposal: { tenantId: env.FOUNDER_TENANT_ID, actorId: env.FOUNDER_ACTOR_ID, toolId: "deployment-unknown-tool", args: {} } });
+  const result = await (await run("model_plan", "/v1/tasks", 202, { request: "Deployment verification only. Reply with the single word READY." })).json();
+  if (!result.model?.output?.trim() || result.model.billable !== false || result.status !== "planned") throw Error("Model plan verification failed");
+  const proof = { passed: true, checks, modelProducedText: true, autonomousExecutionEnabled: false, checkedAt: Date.now() };
+  await env.DB.prepare("INSERT INTO brain2_memory(id,tenant_id,pipeline,namespace,key,value_json,updated_at) VALUES(?,?,'internal','deployment-check',?,?,?) ON CONFLICT(tenant_id,pipeline,namespace,key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at").bind(crypto.randomUUID(), env.FOUNDER_TENANT_ID, id, JSON.stringify(proof), Date.now()).run();
+}
+__name(deploymentCheck, "deploymentCheck");
+
 // src/registry.ts
 var agents = [
   { "id": "ora-director", "name": "ORA Director", "division": "orchestration", "description": "Draft-only ORA Director specialist; no independent external actions.", "capabilities": ["route", "plan", "coordinate"], "allowedTools": ["knowledge.read"], "modelProfile": "reasoning" },
@@ -316,7 +344,7 @@ var Store = class {
 
 // src/index.ts
 var json = /* @__PURE__ */ __name((data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } }), "json");
-var index_default = {
+var app = {
   async fetch(request, env) {
     const url = new URL(request.url), store = new Store(env.DB);
     const principal = founderPrincipal(request, env);
@@ -404,6 +432,7 @@ var index_default = {
     return json({ error: "not found" }, 404);
   },
   async scheduled(_event, env) {
+    if (env.BRAIN2_DEPLOYMENT_CHECK_ID) await deploymentCheck((request) => app.fetch(request, env), env);
     if (!env.FOUNDER_TENANT_ID || !env.FOUNDER_ACTOR_ID || !env.FOUNDER_API_TOKEN || env.FOUNDER_API_TOKEN.length < 32) return;
     try {
       const recovered = await recoverExpired(env, env.FOUNDER_TENANT_ID);
@@ -415,6 +444,7 @@ var index_default = {
     }
   }
 };
+var index_default = app;
 export {
   index_default as default
 };
