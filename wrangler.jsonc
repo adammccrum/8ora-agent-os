@@ -18,5 +18,12 @@
     "crons": [
       "*/15 * * * *"
     ]
+  },
+  "preview_urls": false,
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "WORKERS_AI_FREE_PLAN": "true"
   }
 }

@@ -20,7 +20,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   if(!principal)return json({ready:false,error:"founder authentication required"},401);
   const authReady=Boolean(env.FOUNDER_API_TOKEN&&env.FOUNDER_API_TOKEN.length>=32&&env.FOUNDER_TENANT_ID&&env.FOUNDER_ACTOR_ID);
   if(!authReady||!env.DB)return json({ready:false,reason:"missing required bindings"},503);
-  try{await env.DB.prepare("SELECT 1 FROM brain2_queue LIMIT 1").first();await env.DB.prepare("SELECT 1 FROM approvals LIMIT 1").first();return json({ready:true,service:"8ora-agent-os",database:"ok",autonomousExecutionEnabled:false});}
+  try{await env.DB.prepare("SELECT 1 FROM brain2_queue LIMIT 1").first();await env.DB.prepare("SELECT 1 FROM approvals LIMIT 1").first();return json({ready:true,service:"8ora-agent-os",database:"ok",modelConfigured:Boolean(env.AI&&env.WORKERS_AI_FREE_PLAN==="true"||env.OMNIROUTE_BASE_URL&&env.OMNIROUTE_API_KEY),autonomousExecutionEnabled:false});}
   catch{return json({ready:false,reason:"database migrations incomplete or unavailable"},503)}
  }
  if(request.method==="POST"&&url.pathname==="/v1/brain2/emergency-pause")return json({paused:await pauseQueue(env,principal!.tenantId),warning:"In-flight external work cannot be cancelled by this operation"});
@@ -46,9 +46,10 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="GET"&&url.pathname==="/v1/audit")return json(await store.listAudit(principal!.tenantId,principal!.actorId));
 
  if(request.method==="POST"&&url.pathname==="/v1/tasks"){
-  const body=await request.json<{request?:string;tenantId?:string;actorId?:string}>();
-  if(!body.request||body.tenantId!==principal!.tenantId||body.actorId!==principal!.actorId)return json({error:"request, tenantId and actorId are required"},400);
-  const job=await store.createJob({request:body.request,tenantId:body.tenantId,actorId:body.actorId});
+  const body=await request.json<{request?:string;tenantId?:string;actorId?:string}>().catch(()=>null);
+  if(!body||typeof body.request!=="string"||!body.request.trim()||body.request.length>16000)return json({error:"request must contain 1–16000 characters"},400);
+  if(body.tenantId!==undefined&&body.tenantId!==principal!.tenantId||body.actorId!==undefined&&body.actorId!==principal!.actorId)return json({error:"principal mismatch"},403);
+  const job=await store.createJob({request:body.request,tenantId:principal!.tenantId,actorId:principal!.actorId});
   try{const result=await orchestrate(env,body.request);await store.updateJob(job.id,"planned",result.agent.id);await store.audit("orchestration.planned",{agent:result.agent},{jobId:job.id,tenantId:job.tenantId,actorId:job.actorId});return json({jobId:job.id,...result},202)}
   catch(error){await store.updateJob(job.id,"failed");await store.audit("orchestration.failed",{error:error instanceof Error?error.message:"unknown"},{jobId:job.id,tenantId:job.tenantId,actorId:job.actorId});return json({jobId:job.id,error:"orchestration failed"},502)}
  }
