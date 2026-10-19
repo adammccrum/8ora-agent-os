@@ -170,11 +170,11 @@ __name(founderPrincipal, "founderPrincipal");
 // src/dashboard.ts
 function dashboardHtml() {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="referrer" content="no-referrer"><title>8ORA Agent OS</title>
-<style>body{font-family:system-ui;background:#071018;color:#e8f4f7;margin:0;padding:32px}h1{font-size:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#0e1c26;border:1px solid #1e3b48;border-radius:14px;padding:18px}code{color:#69d6cf}.muted{color:#91a8b3}button,input{padding:12px;margin:4px;background:#112c37;color:#e8f4f7;border:1px solid #34606a;border-radius:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
+<style>body{font-family:system-ui;background:#071018;color:#e8f4f7;margin:0;padding:32px}h1{font-size:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#0e1c26;border:1px solid #1e3b48;border-radius:14px;padding:18px}code{color:#69d6cf}.muted{color:#91a8b3}button,input,textarea{padding:12px;margin:4px;background:#112c37;color:#e8f4f7;border:1px solid #34606a;border-radius:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
 <body><h1>8ORA Agent OS</h1><p class="muted">Private founder dashboard. Autonomous execution disabled until validated.</p>
-<label for="token">Founder token (used only for requests in this tab; never saved)</label><input id="token" type="password" autocomplete="off" spellcheck="false"><button id="connect">Connect</button><button id="disconnect">Clear</button><p id="message" role="status"></p>
-<div class="grid"><div class="card"><h3>Readiness</h3><pre id="health">Not connected</pre></div><div class="card"><h3>Agents</h3><pre id="agents">Not connected</pre></div><div class="card"><h3>Jobs</h3><pre id="jobs">Not connected</pre></div><div class="card"><h3>Audit</h3><pre id="audit">Not connected</pre></div></div>
-<script>const el=id=>document.getElementById(id);async function j(u,t){const r=await fetch(u,{headers:{Authorization:'Bearer '+t},cache:'no-store'});if(!r.ok)throw Error(u+': HTTP '+r.status);return r.json()};el('connect').onclick=async()=>{const t=el('token').value;el('message').textContent='Checking...';try{const h=await j('/ready',t);if(!h.ready)throw Error('Service not ready');const [a,jb,au]=await Promise.all([j('/v1/agents',t),j('/v1/jobs',t),j('/v1/audit',t)]);el('health').textContent=JSON.stringify(h,null,2);el('agents').textContent=a.length+' registered (not necessarily running)';el('jobs').textContent=JSON.stringify(jb.slice(0,5),null,2);el('audit').textContent=JSON.stringify(au.slice(0,5),null,2);el('message').textContent='Connected. Token is not stored.'}catch(e){el('message').textContent='Connection failed: '+e.message}finally{el('token').value=''}};el('disconnect').onclick=()=>{el('token').value='';for(const id of ['health','agents','jobs','audit'])el(id).textContent='Not connected';el('message').textContent='Cleared'};<\/script></body></html>`;
+<label for="token">Founder token (kept only in this tab\u2019s memory; Clear removes it)</label><input id="token" type="password" autocomplete="off" spellcheck="false"><button id="connect">Connect</button><button id="disconnect">Clear</button><p id="message" role="status"></p>
+<section class="card"><h2>Ask Brain 2</h2><label for="request">Task or question</label><br><textarea id="request" rows="4" maxlength="16000" style="width:min(95%,800px)" placeholder="What would you like help with?"></textarea><br><button id="ask" disabled>Plan task</button><p class="muted">Creates a private plan only. Sending, publishing, purchases and autonomous tool execution stay disabled.</p><pre id="answer"></pre></section><br><div class="grid"><div class="card"><h3>Readiness</h3><pre id="health">Not connected</pre></div><div class="card"><h3>Agents</h3><pre id="agents">Not connected</pre></div><div class="card"><h3>Jobs</h3><pre id="jobs">Not connected</pre></div><div class="card"><h3>Audit</h3><pre id="audit">Not connected</pre></div></div>
+<script>let sessionToken="";const el=id=>document.getElementById(id);async function j(u,t){const r=await fetch(u,{headers:{Authorization:'Bearer '+t},cache:'no-store'});if(!r.ok)throw Error(u+': HTTP '+r.status);return r.json()};el('connect').onclick=async()=>{const t=el('token').value;el('message').textContent='Checking...';try{const h=await j('/ready',t);if(!h.ready)throw Error('Service not ready');const [a,jb,au]=await Promise.all([j('/v1/agents',t),j('/v1/jobs',t),j('/v1/audit',t)]);el('health').textContent=JSON.stringify(h,null,2);el('agents').textContent=a.length+' registered (not necessarily running)';el('jobs').textContent=JSON.stringify(jb.slice(0,5),null,2);el('audit').textContent=JSON.stringify(au.slice(0,5),null,2);sessionToken=t;el('ask').disabled=false;el('message').textContent='Connected. Token stays in this tab\u2019s memory until Clear or close.'}catch(e){sessionToken='';el('ask').disabled=true;el('message').textContent='Connection failed: '+e.message}finally{el('token').value=''}};el('ask').onclick=async()=>{const request=el('request').value.trim();if(!request||!sessionToken)return;el('ask').disabled=true;el('answer').textContent='Thinking...';try{const r=await fetch('/v1/tasks',{method:'POST',headers:{Authorization:'Bearer '+sessionToken,'content-type':'application/json'},body:JSON.stringify({request}),cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const result=await r.json();el('answer').textContent=result.agent.name+'\\n\\n'+(result.model.output||JSON.stringify(result.model))+'\\n\\nPlan only \u2014 no external action was performed.'}catch(e){el('answer').textContent='Task failed: '+e.message}finally{el('ask').disabled=!sessionToken}};el('disconnect').onclick=()=>{sessionToken='';el('ask').disabled=true;el('answer').textContent='';el('token').value='';for(const id of ['health','agents','jobs','audit'])el(id).textContent='Not connected';el('message').textContent='Cleared'};<\/script></body></html>`;
 }
 __name(dashboardHtml, "dashboardHtml");
 
@@ -197,6 +197,14 @@ __name(chooseModel, "chooseModel");
 
 // src/omniroute.ts
 async function routeModel(env, request) {
+  if ((!env.OMNIROUTE_BASE_URL || !env.OMNIROUTE_API_KEY) && env.AI && env.WORKERS_AI_FREE_PLAN === "true") {
+    if (request.freeOnly !== true || !request.tier) throw new Error("Model unavailable: verified free model tier required");
+    if (request.messages.reduce((n, m) => n + m.content.length, 0) > 16384) throw new Error("Model request exceeds 16 KiB limit");
+    const model = request.tier === "slm" ? "@cf/meta/llama-3.2-3b-instruct" : "@cf/meta/llama-3.1-8b-instruct-fp8";
+    const result2 = await env.AI.run(model, { messages: request.messages, max_tokens: 512, stream: false });
+    if (typeof result2 !== "object" || result2 === null || !("response" in result2) || typeof result2.response !== "string" || !result2.response.trim()) throw new Error("Workers AI returned no text");
+    return { output: result2.response, tier: request.tier, freeOnly: true, billable: false, model, provider: "cloudflare-workers-ai" };
+  }
   if (!env.OMNIROUTE_BASE_URL || !env.OMNIROUTE_API_KEY) {
     throw new Error("Model unavailable: OmniRoute credentials not configured");
   }
@@ -322,7 +330,7 @@ var index_default = {
       try {
         await env.DB.prepare("SELECT 1 FROM brain2_queue LIMIT 1").first();
         await env.DB.prepare("SELECT 1 FROM approvals LIMIT 1").first();
-        return json({ ready: true, service: "8ora-agent-os", database: "ok", autonomousExecutionEnabled: false });
+        return json({ ready: true, service: "8ora-agent-os", database: "ok", modelConfigured: Boolean(env.AI && env.WORKERS_AI_FREE_PLAN === "true" || env.OMNIROUTE_BASE_URL && env.OMNIROUTE_API_KEY), autonomousExecutionEnabled: false });
       } catch {
         return json({ ready: false, reason: "database migrations incomplete or unavailable" }, 503);
       }
@@ -353,9 +361,10 @@ var index_default = {
     if (request.method === "GET" && url.pathname === "/v1/jobs") return json(await store.listJobs(principal.tenantId, principal.actorId));
     if (request.method === "GET" && url.pathname === "/v1/audit") return json(await store.listAudit(principal.tenantId, principal.actorId));
     if (request.method === "POST" && url.pathname === "/v1/tasks") {
-      const body = await request.json();
-      if (!body.request || body.tenantId !== principal.tenantId || body.actorId !== principal.actorId) return json({ error: "request, tenantId and actorId are required" }, 400);
-      const job = await store.createJob({ request: body.request, tenantId: body.tenantId, actorId: body.actorId });
+      const body = await request.json().catch(() => null);
+      if (!body || typeof body.request !== "string" || !body.request.trim() || body.request.length > 16e3) return json({ error: "request must contain 1\u201316000 characters" }, 400);
+      if (body.tenantId !== void 0 && body.tenantId !== principal.tenantId || body.actorId !== void 0 && body.actorId !== principal.actorId) return json({ error: "principal mismatch" }, 403);
+      const job = await store.createJob({ request: body.request, tenantId: principal.tenantId, actorId: principal.actorId });
       try {
         const result = await orchestrate(env, body.request);
         await store.updateJob(job.id, "planned", result.agent.id);
