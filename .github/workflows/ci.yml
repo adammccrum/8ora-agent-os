@@ -37,3 +37,24 @@ jobs:
           path: dist/worker-check/
           if-no-files-found: error
           retention-days: 7
+      - name: Verify isolated live deployment stays locked
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/private-brain-24x7'
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base = 'https://8ora-agent-os.long-river-2983.workers.dev';
+          const health = await fetch(base + '/health');
+          assert.equal(health.status, 200);
+          const state = await health.json();
+          assert.equal(state.service, '8ora-agent-os');
+          assert.equal(state.autonomousExecutionEnabled, false);
+          const dashboard = await fetch(base);
+          assert.equal(dashboard.status, 200);
+          assert.ok((await dashboard.text()).includes('Private founder dashboard'));
+          assert.ok(dashboard.headers.get('content-security-policy')?.includes("frame-ancestors 'none'"));
+          for (const route of ['/ready', '/v1/jobs', '/v1/audit', '/v1/agents', '/v1/brain2/queue/health']) {
+            const response = await fetch(base + route);
+            assert.equal(response.status, 401, route);
+          }
+          console.log('PASS: live health, dashboard, CSP, five protected routes, autonomous execution disabled');
+          NODE
