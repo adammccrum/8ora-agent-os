@@ -1,3 +1,4 @@
+import {deploymentCheck} from "./deployment-check";
 import {authorize} from "./authority";
 import {listOpenIncidents,acknowledgeIncident,reportIncident,criticalIncidentFeed,resolveIncident} from "./brain2-incidents";
 import {recoverExpired,queueHealth,enqueue,pauseQueue} from "./brain2-queue";
@@ -10,7 +11,7 @@ import {Store} from "./storage";
 import type {ActionProposal,Env} from "./types";
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data,null,2),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
 
-export default {async fetch(request:Request,env:Env):Promise<Response>{
+const app = {async fetch(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url),store=new Store(env.DB);
  const principal=founderPrincipal(request,env);
  if(request.method==="GET"&&url.pathname==="/")return new Response(dashboardHtml(),{headers:{"content-type":"text/html;charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
@@ -86,6 +87,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  return json({error:"not found"},404);
 },
 async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
+ if(env.BRAIN2_DEPLOYMENT_CHECK_ID)await deploymentCheck(request=>app.fetch(request,env),env);
  // Recovery only. Autonomous execution remains disabled until end-to-end authority tests pass.
  if(!env.FOUNDER_TENANT_ID||!env.FOUNDER_ACTOR_ID||!env.FOUNDER_API_TOKEN||env.FOUNDER_API_TOKEN.length<32)return;
  try{
@@ -98,3 +100,4 @@ async scheduled(_event:ScheduledEvent,env:Env):Promise<void>{
  }
 }
 };
+export default app;
