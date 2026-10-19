@@ -4,7 +4,9 @@ import type {Env} from "./types";
 function fixture(token="t".repeat(40)){
  const saved:unknown[][]=[];
  const first=vi.fn().mockResolvedValue(null);
- const db={prepare:vi.fn((sql:string)=>({bind:(...args:unknown[])=>({first,run:async()=>{saved.push(args);return {success:true};}})}))} as D1Database;
+ const prepare=vi.fn();
+ const db:D1Database={prepare,batch:vi.fn(),exec:vi.fn(),withSession:vi.fn(),dump:vi.fn()};
+ prepare.mockImplementation((sql:string)=>({bind:(...args:unknown[])=>({first,run:async()=>{saved.push(args);return {success:true};}})}));
  const env:Env={DB:db,FOUNDER_API_TOKEN:token,FOUNDER_TENANT_ID:"founder",FOUNDER_ACTOR_ID:"owner",BRAIN2_DEPLOYMENT_CHECK_ID:"release-check"};
  return {env,saved};
 }
