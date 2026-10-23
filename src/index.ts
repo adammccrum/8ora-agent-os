@@ -1,4 +1,5 @@
 import {deploymentCheck} from "./deployment-check";
+import {readOrcaOverview} from "./orca-observability";
 import {authorize} from "./authority";
 import {listOpenIncidents,acknowledgeIncident,reportIncident,criticalIncidentFeed,resolveIncident} from "./brain2-incidents";
 import {recoverExpired,queueHealth,enqueue,pauseQueue} from "./brain2-queue";
@@ -41,6 +42,7 @@ const app = {async fetch(request:Request,env:Env):Promise<Response>{
  if(request.method==="POST"&&incidentAck.length===5&&incidentAck[0]==="v1"&&incidentAck[1]==="brain2"&&incidentAck[2]==="incidents"&&incidentAck[4]==="acknowledge")return json({ok:await acknowledgeIncident(env,principal!.tenantId,incidentAck[3])});
  if(request.method==="POST"&&incidentAck.length===5&&incidentAck[0]==="v1"&&incidentAck[1]==="brain2"&&incidentAck[2]==="incidents"&&incidentAck[4]==="resolve")return json({ok:await resolveIncident(env,principal!.tenantId,incidentAck[3])});
  if(request.method==="GET"&&url.pathname==="/v1/brain2/queue/health")return json(await queueHealth(env,principal!.tenantId));
+ if(request.method==="GET"&&url.pathname==="/v1/orca/overview")return json(await readOrcaOverview(env,principal!));
  if(request.method==="GET"&&url.pathname==="/v1/agents")return json(listAgents());
  if(request.method==="GET"&&url.pathname==="/v1/tools")return json(listTools());
  if(request.method==="GET"&&url.pathname==="/v1/jobs")return json(await store.listJobs(principal!.tenantId,principal!.actorId));
