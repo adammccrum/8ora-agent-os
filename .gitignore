@@ -7,3 +7,13 @@ dist/
 .wrangler/
 coverage/
 .DS_Store
+
+# Additional local credentials and test artifacts
+!.env.example
+*.pem
+*.p12
+*.key
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
